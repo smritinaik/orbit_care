@@ -2,23 +2,28 @@ import { store, tick, ingest, setControl } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-// The dashboard polls this every second.
 export async function GET() {
   tick();
   return Response.json({
     mode: store.mode,
     scenario: store.scenario,
+    overlay: (store as any).overlay ?? false,
+    baseline: (store as any).baseline ?? null,
     history: store.history.slice(-300),
   });
 }
 
-// The ESP32 posts readings here. The dashboard posts {action:"control"} here.
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
     if (body.action === "control") {
-      setControl({ mode: body.mode, scenario: body.scenario });
+      setControl({
+        mode: body.mode,
+        scenario: body.scenario,
+        ...(typeof body.overlay === "boolean" ? { overlay: body.overlay } : {}),
+        ...(body.recalibrate ? { recalibrate: true } : {}),
+      } as any);
       return Response.json({ ok: true });
     }
 
